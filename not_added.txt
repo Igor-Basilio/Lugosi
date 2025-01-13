@@ -1,0 +1,16 @@
+
+TODO : 
+   -  Declaração de variaveis em qualquer ponto do código
+
+   -  Atribuição de variaveis com retorno de funções.
+    
+   -  Expressões sem precisar estar entre parênteses. ( Did ) *
+
+   -  Adicionar strings e int ( Did ) *
+
+   -  Poder definir funções antes da main ( em qualquer parte do código );
+      ( Did done du ) *
+
+   -  Definir várias variaveis do mesmo tipo.
+      ( let float n1, n2; ) ( Did ) *
+

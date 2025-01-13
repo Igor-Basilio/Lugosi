@@ -1,0 +1,38 @@
+
+def float calculate(float num1, float num2) {
+    let float result_and;
+    result_and := num1 + num2;
+        return result_and;
+}
+
+void main {
+    let float teste, res, fn;
+    let int mof;
+    let bool valor;
+    let string hello;
+
+    teste := 9.0E20;
+    printIO teste;
+
+    hello := ("Hello, World!" + "And Lugosi too !");
+    printIO hello;
+
+    valor := true;
+    valor := ( 20 < 30 ) + 5;
+    return 0;
+}
+
+def float fib(float n) 
+{
+    let float n1, result;    
+    n1 := 0;
+    
+    while( ( n1 * 2 ) < n ) do
+    {
+        result := ( n1 + n2 );
+        n1 := ( n1 + 1 ) + ( 3 + 4 ) ;
+    };
+
+    return result;
+}
+
