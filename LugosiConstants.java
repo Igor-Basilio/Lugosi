@@ -91,7 +91,7 @@ public interface LugosiConstants {
   /** RegularExpression Id. */
   int EQUALS = 40;
   /** RegularExpression Id. */
-  int REST = 41;
+  int MODULO = 41;
   /** RegularExpression Id. */
   int DEF = 42;
   /** RegularExpression Id. */

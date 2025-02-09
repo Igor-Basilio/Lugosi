@@ -1,0 +1,56 @@
+
+void main {
+    let bool isEven;
+    let float sumOfSquares, rs;
+    let int num;
+    
+    num := readIO();
+    isEven := checkEven(num);
+    if isEven {
+        printIO "Number is even\n";
+    };
+
+    sumOfSquares := calculateSumOfSquares(1, 5);
+    printIO sumOfSquares;
+    
+    rs := power(5, 2);
+    printIO rs;
+
+    return 0;
+}
+
+def float calculateSumOfSquares(float start, float end) {
+    let float sum;
+    sum := 0.0;
+    while ( start <= end ) do {
+        sum := (sum + power(start, 2));
+        start := (start + 1);
+    };
+    return sum;
+}
+
+def float power(float base, float exponent) {
+    let float result;
+    result := 1.0;
+    if ( exponent == 0 ) {
+        return 1;
+    };
+
+    while (exponent > 0) do {
+        result := (result * base);
+        exponent := (exponent - 1);
+    };
+    return result;
+}
+
+def bool checkEven(float num) {
+    let bool c;
+    c := (num % 2);
+
+    if c == 0 {
+        return true;
+    };
+
+    return false;
+}
+

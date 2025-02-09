@@ -6,26 +6,42 @@ def float calculate(float num1, float num2) {
 }
 
 void main {
-    let float teste, res, fn;
+    let float teste, res, fn, another_one;
     let int mof;
     let bool valor;
     let string hello;
+    let int ler_valor;
 
     teste := 9.0E20;
     printIO teste;
 
-    hello := ("Hello, World!" + "And Lugosi too !");
+    another_one := 20 + 30 + 40 * ( 5 + 9 );
+
+
+    hello := ("Hello, World!\n" + "And Lugosi too !");
     printIO hello;
 
     valor := true;
-    valor := ( 20 < 30 ) + 5;
+    valor := ( 20 < 30 ) + (5);
+
+    ler_valor := readIO();
+    ler_valor := ler_valor + 5 + fib(10);
+    if ler_valor > 5  
+    {
+        printIO ler_valor;
+    };
+    printIO 5;
+
+    calculate(20, 30);
+
     return 0;
 }
 
 def float fib(float n) 
 {
-    let float n1, result;    
+    let float n1, result, n2;    
     n1 := 0;
+    n2 := 3;
     
     while( ( n1 * 2 ) < n ) do
     {

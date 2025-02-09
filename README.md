@@ -4,3 +4,4 @@
 # Rodar
   - make
   - java parser/Lugosi <arquivo.lug>
+  - <arquivo>.js será gerado.

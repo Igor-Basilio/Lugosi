@@ -15,11 +15,39 @@ PARSER_BEGIN(Lugosi)
 
       final static String Version = "Lugosi Compiler / Transpiler 1.0 - 2024";
 
+      // String com a tradução de lug -> js.
+      static String target = 
+          "const readline = require('readline');\n\n"
+         +"const rl = readline.createInterface({\n" 
+         +"  input: process.stdin,\n"
+         +"  output: process.stdout\n"
+         +"});\n\n"
+         +"function readIO(prompt)\n{"
+         +"\n  return new Promise((resolve) => {\n"
+         +"    rl.question(prompt, resolve);\n"
+         +"  });\n"
+         +"}\n\n"
+          ;
+
       public static void main(String args[]) throws ParseException,IOException {
 
          Lugosi analisador = new Lugosi(new FileInputStream(args[0]));
          ProgramNode ast = analisador.Lugosi();
-         System.out.println(ast);
+
+         // System.out.println(ast); 
+         // Não é necessário utilizar uma ast
+         // porque o nível de abstração entre Lugosi e 
+         // Javascript é similar.
+         // Na verdade não seria necessário para nenhuma
+         // linguagem de alto nível, já que os statements 
+         // são bem parecidos 
+         // Ex : let int x; ( lug ) -> let x; ( js ) -> int x; ( c )
+         // Ainda é mais fácil já que javascript é uma 
+         // linguagem dinamicamente tipada.
+
+         try (PrintWriter out = new PrintWriter(args[0] + ".js")) {
+             out.println(target);
+         }
 
       }
 
@@ -80,7 +108,7 @@ TOKEN :
     | <LESSEQ: "<=">
     | <MOREEQ: ">=">
     | <EQUALS: "==">
-    | <REST: "%">
+    | <MODULO: "%">
 
     | <DEF: "def">
     | <COMMA: ",">
@@ -114,7 +142,10 @@ MainNode MAIN():
   Token r_type = null;
 }
 {
-  r_type = <VOID> main = <MAIN> <ACHAVES> vd = VARDECL() sc = SEQCOMANDOS() <FCHAVES>
+  (r_type = <VOID>{ target+="async "; })
+  (main = <MAIN>{target+="function main()\n";}) 
+  (<ACHAVES>{target+="{\n";}) vd = VARDECL() sc = SEQCOMANDOS() 
+  (<FCHAVES>{target+="}\n\nmain(); \n\n";})
   { return new MainNode(main, vd, sc, r_type); }
 }
 
@@ -134,7 +165,8 @@ VarDeclNode VARDECL_S():
    ArrayList<Token> ids;
 }
 {
-  r = <LET> t = TIPO() ids = LISTID() <SEMICOLON>
+  (r = <LET>{ target += "   let ";}) t = TIPO() ids = LISTID() 
+  (<SEMICOLON> { target +=";\n"; })
   { return new VarDeclNode(r, t, ids); }
 }
 
@@ -144,14 +176,18 @@ ArrayList<Token> LISTID():
   ArrayList<Token> ids = new ArrayList<Token>();
 }
 {
-  id = <ID> { ids.add(id); } ( LISTID_L(ids))
+  (id = <ID>{ target += id.image; ids.add(id); })
+  ( LISTID_L(ids))
   { return ids; }
 }
 
 void LISTID_L(ArrayList<Token> ids):
 { Token id; }
 {
-    (<COMMA> (id = <ID>) { ids.add(id); } )*
+    (
+      (<COMMA> { target += ", "; }) 
+      (id = <ID> { target += id.image; ids.add(id); })
+    )*
 }
 
 Token TIPO():
@@ -164,61 +200,96 @@ Token TIPO():
 SeqCommandsNode SEQCOMANDOS():
 { }
 {
-  (COMANDO())* 
-  { return null; }
+  { target += "\n"; }               // Before the rules.
+  (COMANDO() { target +="\n";} )*   // At every command.
+  { target+="\n"; return null; }    // After the rules.
 }
 
-void COMANDO():
-{}
+void COMANDO() : {Token id; Token attr;}
 {
-    LOOKAHEAD(2) ( <ID> <ATTRIB> EXP() <SEMICOLON> )
-  | LOOKAHEAD(2) ( <ID> <APAREN> LISTAEXP() <FPAREN> <SEMICOLON> )
-  | ( <IF> EXP() <ACHAVES> SEQCOMANDOS() <FCHAVES> <SEMICOLON> )
+    LOOKAHEAD(3) ( (id=<ID>{target+="\n   try {\n      "+id.image;})
+            (<ATTRIB>{target+=" = ";})
+            (<READIO>{target+="parseInt( await readIO(\"\") );\n"
+             +"   }catch(err)\n"
+             +"   {\n"
+             +"      console.log(\"Erro: \", err);\n"
+             +"   }finally{\n"
+             +"      rl.close();\n"
+             +"   }\n";})
+            <APAREN> <FPAREN> <SEMICOLON> )
+  |
+    LOOKAHEAD(2) 
+    ((id=<ID>{target+="   "+id.image;})
+    (attr=<ATTRIB>{target+=" = ";})
+     EXP() 
+    (<SEMICOLON>{ target+=";";}) )
+  | 
+    LOOKAHEAD(2) 
+    ( (id=<ID>{target+="   "+id.image;}) (<APAREN>{target+="(";})
+      LISTAEXP() (<FPAREN>{target+=")";}) (<SEMICOLON>{target+=";";}) )
 
-  |  ( <WHILE> <APAREN> EXP()
-     <FPAREN> <DO> <ACHAVES> SEQCOMANDOS() <FCHAVES> <SEMICOLON> )
+  | ( (<IF>{target+="   if(";})
+       EXP() (<ACHAVES>{target+="){\n";}) SEQCOMANDOS() 
+      (<FCHAVES>{target+="   }";}) 
+      (<SEMICOLON>{target+=";";}) )
 
-  | LOOKAHEAD(3) ( <ID> <ATTRIB> <READIO> <APAREN> <FPAREN> <SEMICOLON> )
-  | ( <RETURN> EXP() <SEMICOLON> )
-  | ( <PRINTIO> EXP() <SEMICOLON> )
+  |  ( (<WHILE>{target+="   while ";}) (<APAREN>{target+="(";})
+       EXP() (<FPAREN>{target+=")\n";})
+       <DO> (<ACHAVES>{target+="   {";}) 
+       SEQCOMANDOS() (<FCHAVES>{target+="   }";}) 
+       (<SEMICOLON>{target+=";";}) )
+
+  | ( (<RETURN>{target+="   return ";}) EXP() (<SEMICOLON>{target+=";";}) )
+  | ( (<PRINTIO>{target+="   console.log(";}) EXP() (<SEMICOLON>{target+=");";}) )
 }
 
-void EXP():
-{}
+void EXP() : {}
 {
-       <APAREN> FATOR() EXP_L() <FPAREN> (OP() EXP())? 
-      | FATOR() EXP_L() (OP() EXP())?
+    (
+        <APAREN> { target += "("; } EXP() <FPAREN> { target += ")"; }
+    |
+        (FATOR(){target+=" ";})
+    )
+    (
+        OP() 
+        (
+            <APAREN> { target += "("; } EXP() <FPAREN> { target += ")"; }
+        |
+            (FATOR(){target+=" ";})
+        )
+    )*
 }
 
-void EXP_L():
-{}
+void FATOR() : {Token id; Token num; Token str_literal;}
 {
-    (OP() FATOR())* 
-}
+      LOOKAHEAD(2) (id=<ID>{target+=id.image;})
+      (<APAREN>{target+="(";})
+      LISTAEXP()
+      (<FPAREN>{target+=")";}) 
+    
+    | (id=<ID>{target+=id.image;}) 
 
-void FATOR():
-{}
-{
-      LOOKAHEAD(2) <ID> 
-    | ( <ID> <APAREN> LISTAEXP() <FPAREN> )
-    | <NUM>
-    | <STRING_LITERAL>
-    | <TRUE>
-    | <FALSE>
+    | (num=<NUM>{target+=num.image;})
+    | (str_literal=<STRING_LITERAL>{target+=str_literal.image;})
+    | (<TRUE>{target+="true";})
+    | (<FALSE>{target+="false";})
 }
 
 void OP():
 {}
 {
-    <PLUS>
-   |<MINUS>
-   |<MULT>
-   |<DIV>
-   |<AND>
-   |<OR>
-   |<LESSOP>
-   |<MOREOP>
-   |<EQUALS>
+    (<PLUS>{target+="+ ";})
+   |(<MINUS>{target+="- ";})
+   |(<MULT>{target+="* ";})
+   |(<DIV>{target+="/ ";})
+   |(<AND>{target+="&& ";})
+   |(<OR>{target+="|| ";})
+   |(<LESSOP>{target+="< ";})
+   |(<MOREOP>{target+="> ";})
+   |(<EQUALS>{target+="== ";})
+   |(<LESSEQ>{target+="<= ";})
+   |(<MOREEQ>{target+=">= ";})
+   |(<MODULO>{target+="% ";})
 }
 
 void LISTAEXP():
@@ -230,23 +301,26 @@ void LISTAEXP():
 void LISTAEXP_L():
 {}
 {
-  (<COMMA> EXP())*
+  ((<COMMA>{target+=",";}) EXP())*
 }
 
-void LISTAARG():
-{}
+void LISTAARG(): {Token var_id;}
 {
-   TIPO() <ID> LISTAARG_L()
+   TIPO()
+   (var_id=<ID> { target += var_id.image; })
+   LISTAARG_L()
 }
 
-void LISTAARG_L():
-{}
+void LISTAARG_L(): {Token rvar_id;}
 {
-  (<COMMA> TIPO() <ID>)*
+  (
+    (<COMMA> { target += ", "; })
+    TIPO()
+    (rvar_id=<ID> { target += rvar_id;})
+  )*
 }
 
-FunctionNode FUNC():
-{}
+FunctionNode FUNC(): {}
 {
     FUNC_D() FUNC_L()
     { return null; }
@@ -258,9 +332,16 @@ void FUNC_L():
     (FUNC_D())*
 }
 
-void FUNC_D():
-{}
+void FUNC_D() : {Token func_id;}
 {
-    <DEF> TIPO() <ID> <APAREN> LISTAARG() <FPAREN> <ACHAVES> VARDECL() SEQCOMANDOS() <FCHAVES>
+    (<DEF> { target += "function "; })
+     TIPO() (func_id=<ID> { target += func_id.image; }) 
+    (<APAREN> { target += "("; })
+     LISTAARG()
+    (<FPAREN> {target += ")\n";})
+    (<ACHAVES> { target +="{\n";}) 
+     VARDECL() 
+     SEQCOMANDOS() 
+    (<FCHAVES> { target += "}\n\n"; })
 }
 

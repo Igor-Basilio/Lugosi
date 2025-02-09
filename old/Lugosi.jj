@@ -1,0 +1,266 @@
+
+options {
+  STATIC = false;
+  DEBUG_LOOKAHEAD = false;
+}
+
+PARSER_BEGIN(Lugosi)
+
+    package parser;
+    import java.io.*;
+    import syntacticTree.*;
+    import java.util.ArrayList;
+
+    public class Lugosi {
+
+      final static String Version = "Lugosi Compiler / Transpiler 1.0 - 2024";
+
+      public static void main(String args[]) throws ParseException,IOException {
+
+         Lugosi analisador = new Lugosi(new FileInputStream(args[0]));
+         ProgramNode ast = analisador.Lugosi();
+         System.out.println(ast);
+
+      }
+
+    }
+
+PARSER_END(Lugosi)
+
+// # Antes de token, para fazer uso de 
+// expressões regex como macro para ficar mais
+// fácil de ler.
+
+SKIP : { <SKIP_WS: <WHITE_SPACE>> }
+
+TOKEN :
+{
+     <#ALPHA: ["a"-"z","A"-"Z"]>
+    |<#DIGIT: ["0"-"9"] >
+    |<#ALPHA_NUMERIC: <ALPHA>|<DIGIT> >
+    |<#SPECIAL_CHAR: [",","!"]>
+    |<#NEWLINE: ["\n","\r"]|("\r\n") > 
+    |<#WHITE_SPACE:  [" ","\t"]|<NEWLINE> > 
+}
+
+TOKEN :
+{
+      <MAIN: "main">
+    | <ACHAVES: "{">
+    | <FCHAVES: "}">
+    | <VOID: "void">
+    | <LET: "let">
+    | <FLOAT: "float">
+    | <STRING: "string">
+    | <INT: "int">
+    | <SEMICOLON: ";">
+    | <BOOLEAN: "bool">
+    | <ATTRIB: ":=">
+
+    | <APAREN: "(">
+    | <FPAREN: ")">
+    | <IF: "if">
+    | <ELSE: "else">
+    | <WHILE: "while">
+    | <DO: "do">
+    | <READIO: "readIO">
+    | <RETURN: "return">
+    | <PRINTIO: "printIO">
+
+    | <TRUE: "true">
+    | <FALSE: "false">
+    | <PLUS: "+">
+    | <MINUS: "-">
+    | <MULT: "*">
+    | <DIV: "/">
+    | <AND: "&&">
+    | <OR: "||">
+    | <LESSOP: "<">
+    | <MOREOP: ">">
+    | <LESSEQ: "<=">
+    | <MOREEQ: ">=">
+    | <EQUALS: "==">
+    | <REST: "%">
+
+    | <DEF: "def">
+    | <COMMA: ",">
+}
+
+TOKEN :
+{
+     <NUM : (<DIGIT>)+("."(<DIGIT>)+)?("E"("-"|"+")?(<DIGIT>)+)?>
+    |<ID: <ALPHA>(<ALPHA_NUMERIC>)* ("_"(<ALPHA_NUMERIC>)+)?>
+    |<TEMPLATE_LITERAL: ["`"](~["`"])*["`"]>
+    |<STRING_LITERAL: "\""(~["\n","\r","\""])*"\"" >
+}
+
+ProgramNode Lugosi ():
+{ 
+  Token eof = null;
+  MainNode main = null;
+  FunctionNode bf = null, af = null;
+} 
+{
+  (bf = FUNC())? main = MAIN() (af = FUNC())? 
+   eof = <EOF>
+  { return new ProgramNode(eof, main, bf, af); } 
+}
+
+MainNode MAIN():
+{
+  Token main = null;
+  VarDeclBase vd = null; 
+  SeqCommandsNode sc = null;
+  Token r_type = null;
+}
+{
+  r_type = <VOID> main = <MAIN> <ACHAVES> vd = VARDECL() sc = SEQCOMANDOS() <FCHAVES>
+  { return new MainNode(main, vd, sc, r_type); }
+}
+
+VarDeclBase VARDECL():
+{
+  VarDeclBase b = new VarDeclBase();
+  VarDeclNode n;
+}
+{
+  ( n = VARDECL_S() { b.decls.add(n); } )* 
+  { return b; } 
+}
+
+VarDeclNode VARDECL_S():
+{
+   Token t = null, r = null; 
+   ArrayList<Token> ids;
+}
+{
+  r = <LET> t = TIPO() ids = LISTID() <SEMICOLON>
+  { return new VarDeclNode(r, t, ids); }
+}
+
+ArrayList<Token> LISTID():
+{
+  Token id;
+  ArrayList<Token> ids = new ArrayList<Token>();
+}
+{
+  id = <ID> { ids.add(id); } ( LISTID_L(ids))
+  { return ids; }
+}
+
+void LISTID_L(ArrayList<Token> ids):
+{ Token id; }
+{
+    (<COMMA> (id = <ID>) { ids.add(id); } )*
+}
+
+Token TIPO():
+{ Token t = null; }
+{
+    (t = <FLOAT> | t = <BOOLEAN> | t = <VOID> | t = <STRING> | t = <INT>)
+    { return t; }
+}
+
+SeqCommandsNode SEQCOMANDOS():
+{ }
+{
+  (COMANDO())* 
+  { return null; }
+}
+
+void COMANDO():
+{}
+{
+    LOOKAHEAD(2) ( <ID> <ATTRIB> EXP() <SEMICOLON> )
+  | LOOKAHEAD(2) ( <ID> <APAREN> LISTAEXP() <FPAREN> <SEMICOLON> )
+  | ( <IF> EXP() <ACHAVES> SEQCOMANDOS() <FCHAVES> <SEMICOLON> )
+
+  |  ( <WHILE> <APAREN> EXP()
+     <FPAREN> <DO> <ACHAVES> SEQCOMANDOS() <FCHAVES> <SEMICOLON> )
+
+  | LOOKAHEAD(3) ( <ID> <ATTRIB> <READIO> <APAREN> <FPAREN> <SEMICOLON> )
+  | ( <RETURN> EXP() <SEMICOLON> )
+  | ( <PRINTIO> EXP() <SEMICOLON> )
+}
+
+void EXP():
+{}
+{
+       <APAREN> FATOR() EXP_L() <FPAREN> (OP() EXP())? 
+      | FATOR() EXP_L() (OP() EXP())?
+}
+
+void EXP_L():
+{}
+{
+    (OP() FATOR())* 
+}
+
+void FATOR():
+{}
+{
+      LOOKAHEAD(2) <ID> 
+    | ( <ID> <APAREN> LISTAEXP() <FPAREN> )
+    | <NUM>
+    | <STRING_LITERAL>
+    | <TRUE>
+    | <FALSE>
+}
+
+void OP():
+{}
+{
+    <PLUS>
+   |<MINUS>
+   |<MULT>
+   |<DIV>
+   |<AND>
+   |<OR>
+   |<LESSOP>
+   |<MOREOP>
+   |<EQUALS>
+}
+
+void LISTAEXP():
+{}
+{
+   EXP() LISTAEXP_L()
+}
+
+void LISTAEXP_L():
+{}
+{
+  (<COMMA> EXP())*
+}
+
+void LISTAARG():
+{}
+{
+   TIPO() <ID> LISTAARG_L()
+}
+
+void LISTAARG_L():
+{}
+{
+  (<COMMA> TIPO() <ID>)*
+}
+
+FunctionNode FUNC():
+{}
+{
+    FUNC_D() FUNC_L()
+    { return null; }
+}
+
+void FUNC_L():
+{}
+{
+    (FUNC_D())*
+}
+
+void FUNC_D():
+{}
+{
+    <DEF> TIPO() <ID> <APAREN> LISTAARG() <FPAREN> <ACHAVES> VARDECL() SEQCOMANDOS() <FCHAVES>
+}
+
