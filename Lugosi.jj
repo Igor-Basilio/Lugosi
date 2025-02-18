@@ -45,9 +45,18 @@ PARSER_BEGIN(Lugosi)
          // Ainda é mais fácil já que javascript é uma 
          // linguagem dinamicamente tipada.
 
-         try (PrintWriter out = new PrintWriter(args[0] + ".js")) {
-             out.println(target);
-         }
+         PrintWriter out = null;
+	try {
+	    out = new PrintWriter(args[0] + ".js");
+	    out.println(target);
+	} catch (FileNotFoundException e) {
+	    e.printStackTrace();
+	} finally {
+	    if (out != null) {
+		out.close();
+	    }
+	}
+
 
       }
 
