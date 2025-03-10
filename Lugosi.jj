@@ -11,6 +11,7 @@ PARSER_BEGIN(Lugosi)
     import syntacticTree.*;
     import java.util.ArrayList;
 
+    import ast.*;
     public class Lugosi {
 
       final static String Version = "Lugosi Compiler / Transpiler 1.0 - 2024";
@@ -131,16 +132,16 @@ TOKEN :
     |<STRING_LITERAL: "\""(~["\n","\r","\""])*"\"" >
 }
 
-ProgramNode Lugosi ():
+Prog Lugosi ():
 { 
-  Token eof = null;
-  MainNode main = null;
-  FunctionNode bf = null, af = null;
+  Prog programa = null;
+  Main main = null;
+
 } 
 {
-  (bf = FUNC())? main = MAIN() (af = FUNC())? 
+  (FUNC())? main = MAIN() (af = FUNC())? 
    eof = <EOF>
-  { return new ProgramNode(eof, main, bf, af); } 
+  { return new Prog(main  ); } 
 }
 
 MainNode MAIN():
@@ -252,7 +253,10 @@ void COMANDO() : {Token id; Token attr;}
   | ( (<PRINTIO>{target+="   console.log(";}) EXP() (<SEMICOLON>{target+=");";}) )
 }
 
-void EXP() : {}
+void EXP() :
+{
+  Token t = null;
+}
 {
     (
         <APAREN> { target += "("; } EXP() <FPAREN> { target += ")"; }
@@ -260,7 +264,7 @@ void EXP() : {}
         (FATOR(){target+=" ";})
     )
     (
-        OP() 
+        (t = OP())
         (
             <APAREN> { target += "("; } EXP() <FPAREN> { target += ")"; }
         |
@@ -285,20 +289,22 @@ void FATOR() : {Token id; Token num; Token str_literal;}
 }
 
 void OP():
-{}
 {
-    (<PLUS>{target+="+ ";})
-   |(<MINUS>{target+="- ";})
-   |(<MULT>{target+="* ";})
-   |(<DIV>{target+="/ ";})
-   |(<AND>{target+="&& ";})
-   |(<OR>{target+="|| ";})
-   |(<LESSOP>{target+="< ";})
-   |(<MOREOP>{target+="> ";})
-   |(<EQUALS>{target+="== ";})
-   |(<LESSEQ>{target+="<= ";})
-   |(<MOREEQ>{target+=">= ";})
-   |(<MODULO>{target+="% ";})
+  Token t = null;
+}
+{
+    (t=<PLUS>{ return t; })
+   |(t=<MINUS>{target+="- ";})
+   |(t=<MULT>{target+="* ";})
+   |(t=<DIV>{target+="/ ";})
+   |(t=<AND>{target+="&& ";})
+   |(t=<OR>{target+="|| ";})
+   |(t=<LESSOP>{target+="< ";})
+   |(t=<MOREOP>{target+="> ";})
+   |(t=<EQUALS>{target+="== ";})
+   |(t=<LESSEQ>{target+="<= ";})
+   |(t=<MOREEQ>{target+=">= ";})
+   |(t=<MODULO>{target+="% ";})
 }
 
 void LISTAEXP():
