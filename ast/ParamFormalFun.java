@@ -8,4 +8,9 @@ public class ParamFormalFun{
    	this.type = type;
    	this.var = var;
    }
+
+   public String gen_cpp()
+   {
+       return type + " " + var;
+   }
 }

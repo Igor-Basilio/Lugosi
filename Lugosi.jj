@@ -16,48 +16,44 @@ PARSER_BEGIN(Lugosi)
 
       final static String Version = "Lugosi Compiler / Transpiler 1.0 - 2024";
 
-      // String com a tradução de lug -> js.
-      static String target = 
-          "const readline = require('readline');\n\n"
-         +"const rl = readline.createInterface({\n" 
-         +"  input: process.stdin,\n"
-         +"  output: process.stdout\n"
-         +"});\n\n"
-         +"function readIO(prompt)\n{"
-         +"\n  return new Promise((resolve) => {\n"
-         +"    rl.question(prompt, resolve);\n"
-         +"  });\n"
-         +"}\n\n"
-          ;
-
-      public static void main(String args[]) throws ParseException,IOException {
+      public static void main(String args[])
+          throws ParseException,IOException 
+      {
 
          Lugosi analisador = new Lugosi(new FileInputStream(args[0]));
-         ProgramNode ast = analisador.Lugosi();
+         Prog ast = analisador.Lugosi();
+         String code = ast.gen_cpp();
 
-         // System.out.println(ast); 
-         // Não é necessário utilizar uma ast
-         // porque o nível de abstração entre Lugosi e 
-         // Javascript é similar.
-         // Na verdade não seria necessário para nenhuma
-         // linguagem de alto nível, já que os statements 
-         // são bem parecidos 
-         // Ex : let int x; ( lug ) -> let x; ( js ) -> int x; ( c )
-         // Ainda é mais fácil já que javascript é uma 
-         // linguagem dinamicamente tipada.
+         System.out.println(code);
 
-         PrintWriter out = null;
-	try {
-	    out = new PrintWriter(args[0] + ".js");
-	    out.println(target);
-	} catch (FileNotFoundException e) {
-	    e.printStackTrace();
-	} finally {
-	    if (out != null) {
-		out.close();
-	    }
-	}
+        // System.out.println("\nVariaveis da main: ");
+        // for(VarDecl v : ast.main.vars)
+        // {
+        //   System.out.print(v.type + "  "); 
+        //   for(String s : v.var)
+        //   {
+        //      System.out.print(s + " ");
+        //   }
+        //   System.out.println();
+        // }
 
+        // System.out.println("\nComandos da main: ");
+        // for(Comando c : ast.main.coms)
+        // {
+        //    if(c instanceof CIf)
+        //    {
+        //      System.out.println(1);
+        //    }else if(c instanceof CAtribuicao)
+        //    {
+        //      System.out.println(2);
+        //    }
+        // }
+
+        // System.out.println("\nFunções : ");
+        // for(Fun f : ast.fun)
+        // {
+        //    System.out.println(f.retorno + " " + f.nome);
+        // }
 
       }
 
@@ -136,227 +132,302 @@ Prog Lugosi ():
 { 
   Prog programa = null;
   Main main = null;
-
+  ArrayList<Fun>  post_func = null;
+  ArrayList<Fun>  pre_func = null;
 } 
 {
-  (FUNC())? main = MAIN() (af = FUNC())? 
-   eof = <EOF>
-  { return new Prog(main  ); } 
+  ((pre_func = FUNC())? (main = MAIN()) (post_func = FUNC())? <EOF>
+  { 
+    post_func.addAll(pre_func);
+    return new Prog(main, post_func); 
+  })
 }
 
-MainNode MAIN():
+Main MAIN():
 {
-  Token main = null;
-  VarDeclBase vd = null; 
-  SeqCommandsNode sc = null;
-  Token r_type = null;
+  ArrayList<VarDecl> vars = null;
+  ArrayList<Comando> coms = null;
 }
 {
-  (r_type = <VOID>{ target+="async "; })
-  (main = <MAIN>{target+="function main()\n";}) 
-  (<ACHAVES>{target+="{\n";}) vd = VARDECL() sc = SEQCOMANDOS() 
-  (<FCHAVES>{target+="}\n\nmain(); \n\n";})
-  { return new MainNode(main, vd, sc, r_type); }
-}
-
-VarDeclBase VARDECL():
-{
-  VarDeclBase b = new VarDeclBase();
-  VarDeclNode n;
-}
-{
-  ( n = VARDECL_S() { b.decls.add(n); } )* 
-  { return b; } 
+  (<VOID>
+  <MAIN>
+  <ACHAVES>
+  (vars = VARDECL()) 
+  (coms = SEQCOMANDOS())
+  <FCHAVES>)
+  { return new Main(vars, coms); }
 }
 
-VarDeclNode VARDECL_S():
+ArrayList<VarDecl> VARDECL():
 {
-   Token t = null, r = null; 
-   ArrayList<Token> ids;
+  ArrayList<VarDecl> vars = new ArrayList<VarDecl>();
+  VarDecl var = null;
 }
 {
-  (r = <LET>{ target += "   let ";}) t = TIPO() ids = LISTID() 
-  (<SEMICOLON> { target +=";\n"; })
-  { return new VarDeclNode(r, t, ids); }
+  ( var = VARDECL_S() { vars.add(var); } )* 
+  { return vars; } 
 }
 
-ArrayList<Token> LISTID():
+VarDecl VARDECL_S():
 {
-  Token id;
-  ArrayList<Token> ids = new ArrayList<Token>();
+   ArrayList<String> ids;
+   String type = null;
 }
 {
-  (id = <ID>{ target += id.image; ids.add(id); })
-  ( LISTID_L(ids))
+  (<LET> 
+  (type = TIPO())
+  (ids = LISTID()) 
+  <SEMICOLON>)
+  { return new VarDecl(type, ids); }
+}
+
+ArrayList<String> LISTID():
+{
+  ArrayList<String> ids = new ArrayList<String>();
+  Token id = null;
+}
+{
+  ((id = <ID> { ids.add(id.image); } )
+  ( LISTID_L(ids)))
   { return ids; }
 }
 
-void LISTID_L(ArrayList<Token> ids):
-{ Token id; }
+void LISTID_L(ArrayList<String> ids):
+{ Token id = null; }
 {
     (
-      (<COMMA> { target += ", "; }) 
-      (id = <ID> { target += id.image; ids.add(id); })
+      <COMMA> 
+      (id = <ID> { ids.add(id.image); })
     )*
 }
 
-Token TIPO():
+String TIPO():
 { Token t = null; }
 {
     (t = <FLOAT> | t = <BOOLEAN> | t = <VOID> | t = <STRING> | t = <INT>)
-    { return t; }
+    { return t.image; }
 }
 
-SeqCommandsNode SEQCOMANDOS():
-{ }
+ArrayList<Comando> SEQCOMANDOS():
+{ 
+    ArrayList<Comando> coms = new ArrayList<Comando>();
+    Comando com = null;
+}
 {
-  { target += "\n"; }               // Before the rules.
-  (COMANDO() { target +="\n";} )*   // At every command.
-  { target+="\n"; return null; }    // After the rules.
+  (com=COMANDO() { coms.add(com); } )*  
+  { return coms; }
 }
 
-void COMANDO() : {Token id; Token attr;}
+Comando COMANDO() : 
 {
-    LOOKAHEAD(3) ( (id=<ID>{target+="\n   try {\n      "+id.image;})
-            (<ATTRIB>{target+=" = ";})
-            (<READIO>{target+="parseInt( await readIO(\"\") );\n"
-             +"   }catch(err)\n"
-             +"   {\n"
-             +"      console.log(\"Erro: \", err);\n"
-             +"   }finally{\n"
-             +"      rl.close();\n"
-             +"   }\n";})
-            <APAREN> <FPAREN> <SEMICOLON> )
+  Token t = null;
+  Token id   = null;
+  Token readio = null;
+  Exp exp = null;
+  ArrayList<Exp> exps = null;
+  ArrayList<Comando> coms = null;
+}
+{
+    LOOKAHEAD(3) 
+         ((id=<ID>)
+          <ATTRIB>
+         (readio=<READIO>)
+          <APAREN> 
+          <FPAREN>
+          <SEMICOLON>)
+          { return new CReadInput(readio.beginLine, id.image); }
   |
     LOOKAHEAD(2) 
-    ((id=<ID>{target+="   "+id.image;})
-    (attr=<ATTRIB>{target+=" = ";})
-     EXP() 
-    (<SEMICOLON>{ target+=";";}) )
+    ((id=<ID>)
+    <ATTRIB>
+    (exp=EXP())
+    <SEMICOLON>)
+    { return new CAtribuicao(id.beginLine, id.image, exp); }
   | 
     LOOKAHEAD(2) 
-    ( (id=<ID>{target+="   "+id.image;}) (<APAREN>{target+="(";})
-      LISTAEXP() (<FPAREN>{target+=")";}) (<SEMICOLON>{target+=";";}) )
+    ((id=<ID>) 
+      <APAREN>
+    (exps=LISTAEXP())
+      <FPAREN>
+      <SEMICOLON>)
+      { return new CChamadaFun(id.beginLine, id.image, exps); }
 
-  | ( (<IF>{target+="   if(";})
-       EXP() (<ACHAVES>{target+="){\n";}) SEQCOMANDOS() 
-      (<FCHAVES>{target+="   }";}) 
-      (<SEMICOLON>{target+=";";}) )
+  | ( (t=<IF>)
+      (exp=EXP())
+      <ACHAVES>
+      (coms=SEQCOMANDOS())
+      <FCHAVES>
+      <SEMICOLON>)
+      { return new CIf(t.beginLine, exp, coms); }
 
-  |  ( (<WHILE>{target+="   while ";}) (<APAREN>{target+="(";})
-       EXP() (<FPAREN>{target+=")\n";})
-       <DO> (<ACHAVES>{target+="   {";}) 
-       SEQCOMANDOS() (<FCHAVES>{target+="   }";}) 
-       (<SEMICOLON>{target+=";";}) )
+  |  ( (t=<WHILE>)
+       <APAREN>
+       (exp=EXP())
+       <FPAREN>
+       <DO> 
+       <ACHAVES> 
+       (coms=SEQCOMANDOS())
+       <FCHAVES>
+       <SEMICOLON>)
+       { return new CWhile(t.beginLine, exp, coms); } 
 
-  | ( (<RETURN>{target+="   return ";}) EXP() (<SEMICOLON>{target+=";";}) )
-  | ( (<PRINTIO>{target+="   console.log(";}) EXP() (<SEMICOLON>{target+=");";}) )
+
+  | ( (t=<RETURN>)
+      (exp=EXP())
+      <SEMICOLON> )
+      { return new CReturn(t.beginLine, exp); }
+  | ( (t=<PRINTIO>)
+      (exp=EXP())
+      <SEMICOLON> )
+      { return new CPrint(t.beginLine, exp); }
 }
 
-void EXP() :
-{
-  Token t = null;
+Exp EXP():
+{ 
+  String t = null;
+  Exp exp1 = null;
+  Exp exp2 = null;
+  Exp result = null;
 }
 {
-    (
-        <APAREN> { target += "("; } EXP() <FPAREN> { target += ")"; }
+    ((<APAREN>
+    (exp1 = EXP())
+    (t = OP())
+    (exp2 = EXP())
+    <FPAREN>
+    { result=new EOpExp(t, exp1, exp2); })
     |
-        (FATOR(){target+=" ";})
-    )
-    (
-        (t = OP())
-        (
-            <APAREN> { target += "("; } EXP() <FPAREN> { target += ")"; }
-        |
-            (FATOR(){target+=" ";})
-        )
-    )*
+    (exp1=FATOR() { result=exp1; }))
+    { return result; }
 }
 
-void FATOR() : {Token id; Token num; Token str_literal;}
+Exp FATOR() : 
 {
-      LOOKAHEAD(2) (id=<ID>{target+=id.image;})
-      (<APAREN>{target+="(";})
-      LISTAEXP()
-      (<FPAREN>{target+=")";}) 
-    
-    | (id=<ID>{target+=id.image;}) 
+   Token id = null;
+   Token num = null;
+   Token str_literal = null;
+   ArrayList<Exp> args = null;
+}
+{
+      LOOKAHEAD(2)
+     ((id=<ID>)
+      <APAREN>
+      (args=LISTAEXP())
+      <FPAREN>
+      { return new EChamadaFun(id.image, args); })
 
-    | (num=<NUM>{target+=num.image;})
-    | (str_literal=<STRING_LITERAL>{target+=str_literal.image;})
-    | (<TRUE>{target+="true";})
-    | (<FALSE>{target+="false";})
+    | (id=<ID>{return new EVar(id.image);}) 
+    | (num=<NUM>{return new EFloat(Float.parseFloat(num.image));})
+    | (str_literal=<STRING_LITERAL>{ return null; })
+    | (<TRUE>{ return new ETrue(); })
+    | (<FALSE>{ return new EFalse(); })
 }
 
-void OP():
+String OP():
 {
   Token t = null;
 }
 {
-    (t=<PLUS>{ return t; })
-   |(t=<MINUS>{target+="- ";})
-   |(t=<MULT>{target+="* ";})
-   |(t=<DIV>{target+="/ ";})
-   |(t=<AND>{target+="&& ";})
-   |(t=<OR>{target+="|| ";})
-   |(t=<LESSOP>{target+="< ";})
-   |(t=<MOREOP>{target+="> ";})
-   |(t=<EQUALS>{target+="== ";})
-   |(t=<LESSEQ>{target+="<= ";})
-   |(t=<MOREEQ>{target+=">= ";})
-   |(t=<MODULO>{target+="% ";})
+    ((t=<PLUS>)
+   |(t=<MINUS>)
+   |(t=<MULT>)
+   |(t=<DIV>)
+   |(t=<AND>)
+   |(t=<OR>)
+   |(t=<LESSOP>)
+   |(t=<MOREOP>)
+   |(t=<EQUALS>)
+   |(t=<LESSEQ>)
+   |(t=<MOREEQ>)
+   |(t=<MODULO>))
+   { return t.image; }
 }
 
-void LISTAEXP():
-{}
+ArrayList<Exp> LISTAEXP():
 {
-   EXP() LISTAEXP_L()
+  ArrayList<Exp> exps = new ArrayList<Exp>();
+  Exp exp = null;
 }
-
-void LISTAEXP_L():
-{}
 {
-  ((<COMMA>{target+=",";}) EXP())*
+   ((exp=EXP() {exps.add(exp);} )
+    LISTAEXP_L(exps))
+    {return exps;}
 }
 
-void LISTAARG(): {Token var_id;}
+void LISTAEXP_L(ArrayList<Exp> exps):
 {
-   TIPO()
-   (var_id=<ID> { target += var_id.image; })
-   LISTAARG_L()
+  Exp exp = null;
+}
+{
+  (<COMMA>
+   (exp=EXP() {exps.add(exp);}) )*
 }
 
-void LISTAARG_L(): {Token rvar_id;}
+ArrayList<ParamFormalFun> LISTAARG():
+{
+  String type = null;
+  Token var_id;
+  ArrayList<ParamFormalFun> params = new ArrayList<ParamFormalFun>();
+}
+{
+  (type=TIPO())
+  (var_id=<ID> { params.add(new ParamFormalFun(type, var_id.image));} )
+   LISTAARG_L(params)
+  {return params;}
+}
+
+void LISTAARG_L(ArrayList<ParamFormalFun> params) :
+{
+  String type = null;
+  Token rvar_id = null;
+}
 {
   (
-    (<COMMA> { target += ", "; })
-    TIPO()
-    (rvar_id=<ID> { target += rvar_id;})
+    <COMMA> 
+    (type=TIPO())
+    (rvar_id=<ID>) 
+    { params.add( new ParamFormalFun(type, rvar_id.image) ); }
   )*
 }
 
-FunctionNode FUNC(): {}
+ArrayList<Fun> FUNC() :
 {
-    FUNC_D() FUNC_L()
-    { return null; }
+    ArrayList<Fun> funs = new ArrayList<Fun>();
+    Fun fun = null;
+}
+{
+    (fun=FUNC_D(){funs.add(fun);}) FUNC_L(funs)
+    { return funs; }
 }
 
-void FUNC_L():
-{}
+void FUNC_L(ArrayList<Fun> funs):
 {
-    (FUNC_D())*
+  Fun fun = null;
+}
+{
+    (fun=FUNC_D(){funs.add(fun);})*
 }
 
-void FUNC_D() : {Token func_id;}
+Fun FUNC_D() :
 {
-    (<DEF> { target += "function "; })
-     TIPO() (func_id=<ID> { target += func_id.image; }) 
-    (<APAREN> { target += "("; })
-     LISTAARG()
-    (<FPAREN> {target += ")\n";})
-    (<ACHAVES> { target +="{\n";}) 
-     VARDECL() 
-     SEQCOMANDOS() 
-    (<FCHAVES> { target += "}\n\n"; })
+  Token name;
+  ArrayList<VarDecl> vars = null;
+  ArrayList<Comando> coms = null;
+  ArrayList<ParamFormalFun> params = null;
+  String retorno = null;
+}
+{
+    (<DEF> 
+    (retorno=TIPO()) 
+    (name=<ID>)
+    <APAREN>
+    (params=LISTAARG())
+    <FPAREN> 
+    <ACHAVES> 
+    (vars=VARDECL())
+    (coms=SEQCOMANDOS())
+    <FCHAVES>
+    { return new Fun(name.image, params, retorno, vars, coms); } )
+
 }
 

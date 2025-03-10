@@ -3,65 +3,61 @@
     package parser;
     import java.io.*;
     import syntacticTree.*;
-    import ast.*;
     import java.util.ArrayList;
 
+    import ast.*;
     public class Lugosi implements LugosiConstants {
 
       final static String Version = "Lugosi Compiler / Transpiler 1.0 - 2024";
 
-      // String com a tradução de lug -> js.
-      static String target =
-          "const readline = require('readline');\n\n"
-         +"const rl = readline.createInterface({\n"
-         +"  input: process.stdin,\n"
-         +"  output: process.stdout\n"
-         +"});\n\n"
-         +"function readIO(prompt)\n{"
-         +"\n  return new Promise((resolve) => {\n"
-         +"    rl.question(prompt, resolve);\n"
-         +"  });\n"
-         +"}\n\n"
-          ;
-
-      public static void main(String args[]) throws ParseException,IOException {
+      public static void main(String args[])
+          throws ParseException,IOException
+      {
 
          Lugosi analisador = new Lugosi(new FileInputStream(args[0]));
-         ProgramNode ast = analisador.Lugosi();
+         Prog ast = analisador.Lugosi();
+         String code = ast.gen_cpp();
 
-         // System.out.println(ast); 
-         // Não é necessário utilizar uma ast
-         // porque o nível de abstração entre Lugosi e 
-         // Javascript é similar.
-         // Na verdade não seria necessário para nenhuma
-         // linguagem de alto nível, já que os statements 
-         // são bem parecidos 
-         // Ex : let int x; ( lug ) -> let x; ( js ) -> int x; ( c )
-         // Ainda é mais fácil já que javascript é uma 
-         // linguagem dinamicamente tipada.
+         System.out.println(code);
 
-         PrintWriter out = null;
-        try {
-            out = new PrintWriter(args[0] + ".js");
-            out.println(target);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } finally {
-            if (out != null) {
-                out.close();
-            }
-        }
+        // System.out.println("\nVariaveis da main: ");
+        // for(VarDecl v : ast.main.vars)
+        // {
+        //   System.out.print(v.type + "  "); 
+        //   for(String s : v.var)
+        //   {
+        //      System.out.print(s + " ");
+        //   }
+        //   System.out.println();
+        // }
 
+        // System.out.println("\nComandos da main: ");
+        // for(Comando c : ast.main.coms)
+        // {
+        //    if(c instanceof CIf)
+        //    {
+        //      System.out.println(1);
+        //    }else if(c instanceof CAtribuicao)
+        //    {
+        //      System.out.println(2);
+        //    }
+        // }
+
+        // System.out.println("\nFunções : ");
+        // for(Fun f : ast.fun)
+        // {
+        //    System.out.println(f.retorno + " " + f.nome);
+        // }
 
       }
 
-  final public ProgramNode Lugosi() throws ParseException {Token eof = null;
-  MainNode main = null;
-  FunctionNode bf = null, af = null;
-  Prog programa = null;
+  final public Prog Lugosi() throws ParseException {Prog programa = null;
+  Main main = null;
+  ArrayList<Fun>  post_func = null;
+  ArrayList<Fun>  pre_func = null;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case DEF:{
-      bf = FUNC();
+      pre_func = FUNC();
       break;
       }
     default:
@@ -71,38 +67,33 @@
     main = MAIN();
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case DEF:{
-      af = FUNC();
+      post_func = FUNC();
       break;
       }
     default:
       jj_la1[1] = jj_gen;
       ;
     }
-    eof = jj_consume_token(0);
-{if ("" != null) return new ProgramNode(eof, main, bf, af);}
+    jj_consume_token(0);
+post_func.addAll(pre_func);
+    {if ("" != null) return new Prog(main, post_func);}
     throw new Error("Missing return statement in function");
 }
 
-  final public MainNode MAIN() throws ParseException {Token main = null;
-  VarDeclBase vd = null;
-  SeqCommandsNode sc = null;
-  Token r_type = null;
-    r_type = jj_consume_token(VOID);
-target+="async ";
-    main = jj_consume_token(MAIN);
-target+="function main()\n";
+  final public Main MAIN() throws ParseException {ArrayList<VarDecl> vars = null;
+  ArrayList<Comando> coms = null;
+    jj_consume_token(VOID);
+    jj_consume_token(MAIN);
     jj_consume_token(ACHAVES);
-target+="{\n";
-    vd = VARDECL();
-    sc = SEQCOMANDOS();
+    vars = VARDECL();
+    coms = SEQCOMANDOS();
     jj_consume_token(FCHAVES);
-target+="}\n\nmain(); \n\n";
-{if ("" != null) return new MainNode(main, vd, sc, r_type);}
+{if ("" != null) return new Main(vars, coms);}
     throw new Error("Missing return statement in function");
 }
 
-  final public VarDeclBase VARDECL() throws ParseException {VarDeclBase b = new VarDeclBase();
-  VarDeclNode n;
+  final public ArrayList<VarDecl> VARDECL() throws ParseException {ArrayList<VarDecl> vars = new ArrayList<VarDecl>();
+  VarDecl var = null;
     label_1:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -114,35 +105,33 @@ target+="}\n\nmain(); \n\n";
         jj_la1[2] = jj_gen;
         break label_1;
       }
-      n = VARDECL_S();
-b.decls.add(n);
+      var = VARDECL_S();
+vars.add(var);
     }
-{if ("" != null) return b;}
+{if ("" != null) return vars;}
     throw new Error("Missing return statement in function");
 }
 
-  final public VarDeclNode VARDECL_S() throws ParseException {Token t = null, r = null;
-   ArrayList<Token> ids;
-    r = jj_consume_token(LET);
-target += "   let ";
-    t = TIPO();
+  final public VarDecl VARDECL_S() throws ParseException {ArrayList<String> ids;
+   String type = null;
+    jj_consume_token(LET);
+    type = TIPO();
     ids = LISTID();
     jj_consume_token(SEMICOLON);
-target +=";\n";
-{if ("" != null) return new VarDeclNode(r, t, ids);}
+{if ("" != null) return new VarDecl(type, ids);}
     throw new Error("Missing return statement in function");
 }
 
-  final public ArrayList<Token> LISTID() throws ParseException {Token id;
-  ArrayList<Token> ids = new ArrayList<Token>();
+  final public ArrayList<String> LISTID() throws ParseException {ArrayList<String> ids = new ArrayList<String>();
+  Token id = null;
     id = jj_consume_token(ID);
-target += id.image; ids.add(id);
+ids.add(id.image);
     LISTID_L(ids);
 {if ("" != null) return ids;}
     throw new Error("Missing return statement in function");
 }
 
-  final public void LISTID_L(ArrayList<Token> ids) throws ParseException {Token id;
+  final public void LISTID_L(ArrayList<String> ids) throws ParseException {Token id = null;
     label_2:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -155,13 +144,12 @@ target += id.image; ids.add(id);
         break label_2;
       }
       jj_consume_token(COMMA);
-target += ", ";
       id = jj_consume_token(ID);
-target += id.image; ids.add(id);
+ids.add(id.image);
     }
 }
 
-  final public Token TIPO() throws ParseException {Token t = null;
+  final public String TIPO() throws ParseException {Token t = null;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case FLOAT:{
       t = jj_consume_token(FLOAT);
@@ -188,12 +176,12 @@ target += id.image; ids.add(id);
       jj_consume_token(-1);
       throw new ParseException();
     }
-{if ("" != null) return t;}
+{if ("" != null) return t.image;}
     throw new Error("Missing return statement in function");
 }
 
-  final public SeqCommandsNode SEQCOMANDOS() throws ParseException {
-target += "\n";
+  final public ArrayList<Comando> SEQCOMANDOS() throws ParseException {ArrayList<Comando> coms = new ArrayList<Comando>();
+    Comando com = null;
     label_3:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -209,95 +197,77 @@ target += "\n";
         jj_la1[5] = jj_gen;
         break label_3;
       }
-      COMANDO();
-target +="\n";
+      com = COMANDO();
+coms.add(com);
     }
-target+="\n"; {if ("" != null) return null;}
+{if ("" != null) return coms;}
     throw new Error("Missing return statement in function");
 }
 
-  final public void COMANDO() throws ParseException {Token id; Token attr;
+  final public Comando COMANDO() throws ParseException {Token t = null;
+  Token id   = null;
+  Token readio = null;
+  Exp exp = null;
+  ArrayList<Exp> exps = null;
+  ArrayList<Comando> coms = null;
     if (jj_2_1(3)) {
       id = jj_consume_token(ID);
-target+="\n   try {\n      "+id.image;
       jj_consume_token(ATTRIB);
-target+=" = ";
-      jj_consume_token(READIO);
-target+="parseInt( await readIO(\"\") );\n"
-             +"   }catch(err)\n"
-             +"   {\n"
-             +"      console.log(\"Erro: \", err);\n"
-             +"   }finally{\n"
-             +"      rl.close();\n"
-             +"   }\n";
+      readio = jj_consume_token(READIO);
       jj_consume_token(APAREN);
       jj_consume_token(FPAREN);
       jj_consume_token(SEMICOLON);
+{if ("" != null) return new CReadInput(readio.beginLine, id.image);}
     } else if (jj_2_2(2)) {
       id = jj_consume_token(ID);
-target+="   "+id.image;
-      attr = jj_consume_token(ATTRIB);
-target+=" = ";
-      EXP();
+      jj_consume_token(ATTRIB);
+      exp = EXP();
       jj_consume_token(SEMICOLON);
-target+=";";
+{if ("" != null) return new CAtribuicao(id.beginLine, id.image, exp);}
     } else if (jj_2_3(2)) {
       id = jj_consume_token(ID);
-target+="   "+id.image;
       jj_consume_token(APAREN);
-target+="(";
-      LISTAEXP();
+      exps = LISTAEXP();
       jj_consume_token(FPAREN);
-target+=")";
       jj_consume_token(SEMICOLON);
-target+=";";
+{if ("" != null) return new CChamadaFun(id.beginLine, id.image, exps);}
     } else {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
       case IF:{
-        jj_consume_token(IF);
-target+="   if(";
-        EXP();
+        t = jj_consume_token(IF);
+        exp = EXP();
         jj_consume_token(ACHAVES);
-target+="){\n";
-        SEQCOMANDOS();
+        coms = SEQCOMANDOS();
         jj_consume_token(FCHAVES);
-target+="   }";
         jj_consume_token(SEMICOLON);
-target+=";";
+{if ("" != null) return new CIf(t.beginLine, exp, coms);}
         break;
         }
       case WHILE:{
-        jj_consume_token(WHILE);
-target+="   while ";
+        t = jj_consume_token(WHILE);
         jj_consume_token(APAREN);
-target+="(";
-        EXP();
+        exp = EXP();
         jj_consume_token(FPAREN);
-target+=")\n";
         jj_consume_token(DO);
         jj_consume_token(ACHAVES);
-target+="   {";
-        SEQCOMANDOS();
+        coms = SEQCOMANDOS();
         jj_consume_token(FCHAVES);
-target+="   }";
         jj_consume_token(SEMICOLON);
-target+=";";
+{if ("" != null) return new CWhile(t.beginLine, exp, coms);}
         break;
         }
       case RETURN:{
-        jj_consume_token(RETURN);
-target+="   return ";
-        EXP();
+        t = jj_consume_token(RETURN);
+        exp = EXP();
         jj_consume_token(SEMICOLON);
-target+=";";
+{if ("" != null) return new CReturn(t.beginLine, exp);}
         break;
         }
       case PRINTIO:{
-        jj_consume_token(PRINTIO);
-target+="   console.log(";
-        EXP();
+        t = jj_consume_token(PRINTIO);
+        exp = EXP();
         jj_consume_token(SEMICOLON);
-target+=");";
+{if ("" != null) return new CPrint(t.beginLine, exp);}
         break;
         }
       default:
@@ -306,16 +276,21 @@ target+=");";
         throw new ParseException();
       }
     }
+    throw new Error("Missing return statement in function");
 }
 
-  final public void EXP() throws ParseException {
+  final public Exp EXP() throws ParseException {String t = null;
+  Exp exp1 = null;
+  Exp exp2 = null;
+  Exp result = null;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case APAREN:{
       jj_consume_token(APAREN);
-target += "(";
-      EXP();
+      exp1 = EXP();
+      t = OP();
+      exp2 = EXP();
       jj_consume_token(FPAREN);
-target += ")";
+result=new EOpExp(t, exp1, exp2);
       break;
       }
     case TRUE:
@@ -323,8 +298,8 @@ target += ")";
     case NUM:
     case ID:
     case STRING_LITERAL:{
-      FATOR();
-target+=" ";
+      exp1 = FATOR();
+result=exp1;
       break;
       }
     default:
@@ -332,174 +307,155 @@ target+=" ";
       jj_consume_token(-1);
       throw new ParseException();
     }
-    label_4:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case PLUS:
-      case MINUS:
-      case MULT:
-      case DIV:
-      case AND:
-      case OR:
-      case LESSOP:
-      case MOREOP:
-      case LESSEQ:
-      case MOREEQ:
-      case EQUALS:
-      case MODULO:{
-        ;
-        break;
-        }
-      default:
-        jj_la1[8] = jj_gen;
-        break label_4;
-      }
-      OP();
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case APAREN:{
-        jj_consume_token(APAREN);
-target += "(";
-        EXP();
-        jj_consume_token(FPAREN);
-target += ")";
-        break;
-        }
-      case TRUE:
-      case FALSE:
-      case NUM:
-      case ID:
-      case STRING_LITERAL:{
-        FATOR();
-target+=" ";
-        break;
-        }
-      default:
-        jj_la1[9] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
-      }
-    }
+{if ("" != null) return result;}
+    throw new Error("Missing return statement in function");
 }
 
-  final public void FATOR() throws ParseException {Token id; Token num; Token str_literal;
+  final public Exp FATOR() throws ParseException {Token id = null;
+   Token num = null;
+   Token str_literal = null;
+   ArrayList<Exp> args = null;
     if (jj_2_4(2)) {
       id = jj_consume_token(ID);
-target+=id.image;
       jj_consume_token(APAREN);
-target+="(";
-      LISTAEXP();
+      args = LISTAEXP();
       jj_consume_token(FPAREN);
-target+=")";
+{if ("" != null) return new EChamadaFun(id.image, args);}
     } else {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
       case ID:{
         id = jj_consume_token(ID);
-target+=id.image;
+{if ("" != null) return new EVar(id.image);}
         break;
         }
       case NUM:{
         num = jj_consume_token(NUM);
-target+=num.image;
+{if ("" != null) return new EFloat(Float.parseFloat(num.image));}
         break;
         }
       case STRING_LITERAL:{
         str_literal = jj_consume_token(STRING_LITERAL);
-target+=str_literal.image;
+{if ("" != null) return null;}
         break;
         }
       case TRUE:{
         jj_consume_token(TRUE);
-target+="true";
+{if ("" != null) return new ETrue();}
         break;
         }
       case FALSE:{
         jj_consume_token(FALSE);
-target+="false";
+{if ("" != null) return new EFalse();}
         break;
         }
       default:
-        jj_la1[10] = jj_gen;
+        jj_la1[8] = jj_gen;
         jj_consume_token(-1);
         throw new ParseException();
       }
     }
+    throw new Error("Missing return statement in function");
 }
 
-  final public void OP() throws ParseException {
+  final public String OP() throws ParseException {Token t = null;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case PLUS:{
-      jj_consume_token(PLUS);
-target+="+ ";
+      t = jj_consume_token(PLUS);
       break;
       }
     case MINUS:{
-      jj_consume_token(MINUS);
-target+="- ";
+      t = jj_consume_token(MINUS);
       break;
       }
     case MULT:{
-      jj_consume_token(MULT);
-target+="* ";
+      t = jj_consume_token(MULT);
       break;
       }
     case DIV:{
-      jj_consume_token(DIV);
-target+="/ ";
+      t = jj_consume_token(DIV);
       break;
       }
     case AND:{
-      jj_consume_token(AND);
-target+="&& ";
+      t = jj_consume_token(AND);
       break;
       }
     case OR:{
-      jj_consume_token(OR);
-target+="|| ";
+      t = jj_consume_token(OR);
       break;
       }
     case LESSOP:{
-      jj_consume_token(LESSOP);
-target+="< ";
+      t = jj_consume_token(LESSOP);
       break;
       }
     case MOREOP:{
-      jj_consume_token(MOREOP);
-target+="> ";
+      t = jj_consume_token(MOREOP);
       break;
       }
     case EQUALS:{
-      jj_consume_token(EQUALS);
-target+="== ";
+      t = jj_consume_token(EQUALS);
       break;
       }
     case LESSEQ:{
-      jj_consume_token(LESSEQ);
-target+="<= ";
+      t = jj_consume_token(LESSEQ);
       break;
       }
     case MOREEQ:{
-      jj_consume_token(MOREEQ);
-target+=">= ";
+      t = jj_consume_token(MOREEQ);
       break;
       }
     case MODULO:{
-      jj_consume_token(MODULO);
-target+="% ";
+      t = jj_consume_token(MODULO);
       break;
       }
     default:
-      jj_la1[11] = jj_gen;
+      jj_la1[9] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
+{if ("" != null) return t.image;}
+    throw new Error("Missing return statement in function");
 }
 
-  final public void LISTAEXP() throws ParseException {
-    EXP();
-    LISTAEXP_L();
+  final public ArrayList<Exp> LISTAEXP() throws ParseException {ArrayList<Exp> exps = new ArrayList<Exp>();
+  Exp exp = null;
+    exp = EXP();
+exps.add(exp);
+    LISTAEXP_L(exps);
+{if ("" != null) return exps;}
+    throw new Error("Missing return statement in function");
 }
 
-  final public void LISTAEXP_L() throws ParseException {
+  final public void LISTAEXP_L(ArrayList<Exp> exps) throws ParseException {Exp exp = null;
+    label_4:
+    while (true) {
+      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+      case COMMA:{
+        ;
+        break;
+        }
+      default:
+        jj_la1[10] = jj_gen;
+        break label_4;
+      }
+      jj_consume_token(COMMA);
+      exp = EXP();
+exps.add(exp);
+    }
+}
+
+  final public ArrayList<ParamFormalFun> LISTAARG() throws ParseException {String type = null;
+  Token var_id;
+  ArrayList<ParamFormalFun> params = new ArrayList<ParamFormalFun>();
+    type = TIPO();
+    var_id = jj_consume_token(ID);
+params.add(new ParamFormalFun(type, var_id.image));
+    LISTAARG_L(params);
+{if ("" != null) return params;}
+    throw new Error("Missing return statement in function");
+}
+
+  final public void LISTAARG_L(ArrayList<ParamFormalFun> params) throws ParseException {String type = null;
+  Token rvar_id = null;
     label_5:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -508,51 +464,27 @@ target+="% ";
         break;
         }
       default:
-        jj_la1[12] = jj_gen;
+        jj_la1[11] = jj_gen;
         break label_5;
       }
       jj_consume_token(COMMA);
-target+=",";
-      EXP();
-    }
-}
-
-  final public void LISTAARG() throws ParseException {Token var_id;
-    TIPO();
-    var_id = jj_consume_token(ID);
-target += var_id.image;
-    LISTAARG_L();
-}
-
-  final public void LISTAARG_L() throws ParseException {Token rvar_id;
-    label_6:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case COMMA:{
-        ;
-        break;
-        }
-      default:
-        jj_la1[13] = jj_gen;
-        break label_6;
-      }
-      jj_consume_token(COMMA);
-target += ", ";
-      TIPO();
+      type = TIPO();
       rvar_id = jj_consume_token(ID);
-target += rvar_id;
+params.add( new ParamFormalFun(type, rvar_id.image) );
     }
 }
 
-  final public FunctionNode FUNC() throws ParseException {
-    FUNC_D();
-    FUNC_L();
-{if ("" != null) return null;}
+  final public ArrayList<Fun> FUNC() throws ParseException {ArrayList<Fun> funs = new ArrayList<Fun>();
+    Fun fun = null;
+    fun = FUNC_D();
+funs.add(fun);
+    FUNC_L(funs);
+{if ("" != null) return funs;}
     throw new Error("Missing return statement in function");
 }
 
-  final public void FUNC_L() throws ParseException {
-    label_7:
+  final public void FUNC_L(ArrayList<Fun> funs) throws ParseException {Fun fun = null;
+    label_6:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
       case DEF:{
@@ -560,30 +492,31 @@ target += rvar_id;
         break;
         }
       default:
-        jj_la1[14] = jj_gen;
-        break label_7;
+        jj_la1[12] = jj_gen;
+        break label_6;
       }
-      FUNC_D();
+      fun = FUNC_D();
+funs.add(fun);
     }
 }
 
-  final public void FUNC_D() throws ParseException {Token func_id;
+  final public Fun FUNC_D() throws ParseException {Token name;
+  ArrayList<VarDecl> vars = null;
+  ArrayList<Comando> coms = null;
+  ArrayList<ParamFormalFun> params = null;
+  String retorno = null;
     jj_consume_token(DEF);
-target += "function ";
-    TIPO();
-    func_id = jj_consume_token(ID);
-target += func_id.image;
+    retorno = TIPO();
+    name = jj_consume_token(ID);
     jj_consume_token(APAREN);
-target += "(";
-    LISTAARG();
+    params = LISTAARG();
     jj_consume_token(FPAREN);
-target += ")\n";
     jj_consume_token(ACHAVES);
-target +="{\n";
-    VARDECL();
-    SEQCOMANDOS();
+    vars = VARDECL();
+    coms = SEQCOMANDOS();
     jj_consume_token(FCHAVES);
-target += "}\n\n";
+{if ("" != null) return new Fun(name.image, params, retorno, vars, coms);}
+    throw new Error("Missing return statement in function");
 }
 
   private boolean jj_2_1(int xla)
@@ -618,17 +551,10 @@ target += "}\n\n";
     finally { jj_save(3, xla); }
   }
 
-  private boolean jj_3_4()
+  private boolean jj_3_3()
  {
     if (jj_scan_token(ID)) return true;
     if (jj_scan_token(APAREN)) return true;
-    return false;
-  }
-
-  private boolean jj_3_2()
- {
-    if (jj_scan_token(ID)) return true;
-    if (jj_scan_token(ATTRIB)) return true;
     return false;
   }
 
@@ -640,7 +566,14 @@ target += "}\n\n";
     return false;
   }
 
-  private boolean jj_3_3()
+  private boolean jj_3_2()
+ {
+    if (jj_scan_token(ID)) return true;
+    if (jj_scan_token(ATTRIB)) return true;
+    return false;
+  }
+
+  private boolean jj_3_4()
  {
     if (jj_scan_token(ID)) return true;
     if (jj_scan_token(APAREN)) return true;
@@ -658,7 +591,7 @@ target += "}\n\n";
   private Token jj_scanpos, jj_lastpos;
   private int jj_la;
   private int jj_gen;
-  final private int[] jj_la1 = new int[15];
+  final private int[] jj_la1 = new int[13];
   static private int[] jj_la1_0;
   static private int[] jj_la1_1;
   static {
@@ -666,10 +599,10 @@ target += "}\n\n";
 	   jj_la1_init_1();
 	}
 	private static void jj_la1_init_0() {
-	   jj_la1_0 = new int[] {0x0,0x0,0x1000,0x0,0x2e800,0xca00000,0xca00000,0x30080000,0xc0000000,0x30080000,0x30000000,0xc0000000,0x0,0x0,0x0,};
+	   jj_la1_0 = new int[] {0x0,0x0,0x1000,0x0,0x2e800,0xca00000,0xca00000,0x30080000,0x30000000,0xc0000000,0x0,0x0,0x0,};
 	}
 	private static void jj_la1_init_1() {
-	   jj_la1_1 = new int[] {0x400,0x400,0x0,0x800,0x0,0x2000,0x0,0xb000,0x3ff,0xb000,0xb000,0x3ff,0x800,0x800,0x400,};
+	   jj_la1_1 = new int[] {0x400,0x400,0x0,0x800,0x0,0x2000,0x0,0xb000,0xb000,0x3ff,0x800,0x800,0x400,};
 	}
   final private JJCalls[] jj_2_rtns = new JJCalls[4];
   private boolean jj_rescan = false;
@@ -686,7 +619,7 @@ target += "}\n\n";
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -701,7 +634,7 @@ target += "}\n\n";
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -712,7 +645,7 @@ target += "}\n\n";
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -731,7 +664,7 @@ target += "}\n\n";
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -741,7 +674,7 @@ target += "}\n\n";
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -751,7 +684,7 @@ target += "}\n\n";
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -887,7 +820,7 @@ target += "}\n\n";
 	   la1tokens[jj_kind] = true;
 	   jj_kind = -1;
 	 }
-	 for (int i = 0; i < 15; i++) {
+	 for (int i = 0; i < 13; i++) {
 	   if (jj_la1[i] == jj_gen) {
 		 for (int j = 0; j < 32; j++) {
 		   if ((jj_la1_0[i] & (1<<j)) != 0) {

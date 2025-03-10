@@ -8,7 +8,11 @@ public class EVar extends Exp{
 	public EVar(String var)
 	{
 	  this.var = var;
-	  
 	} 
+
+    public String gen_cpp()
+    {
+        return var;
+    }
 
 }

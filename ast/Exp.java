@@ -1,4 +1,7 @@
 package ast;
 
-public class Exp{}
+abstract public class Exp
+{
+    abstract public String gen_cpp();
+}
 

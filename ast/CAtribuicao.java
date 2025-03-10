@@ -13,4 +13,15 @@ public class CAtribuicao extends Comando{
 	  this.exp = exp;
 	} 
 
+    public String gen_cpp()
+    {
+        StringBuilder res = new StringBuilder();
+        
+        res.append(var);
+        res.append(" = ");
+        res.append(exp.gen_cpp());
+        res.append(";\n");
+        
+        return res.toString();
+    }
 }

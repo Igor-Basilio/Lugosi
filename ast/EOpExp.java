@@ -14,4 +14,14 @@ public class EOpExp extends Exp{
 	  this.arg2 = arg2;
 	} 
 
+    public String gen_cpp()
+    {
+        StringBuilder res = new StringBuilder();
+
+        res.append(arg1.gen_cpp());
+        res.append(op);
+        res.append(arg2.gen_cpp());
+
+        return res.toString();
+    }
 }

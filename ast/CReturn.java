@@ -11,7 +11,16 @@ public class CReturn extends Comando{
 	{
 	  this.linha = linha;
 	  this.exp = exp;
-	  
 	} 
 
+    public String gen_cpp()
+    {
+        StringBuilder res = new StringBuilder();
+
+        res.append("return ");
+        res.append(exp.gen_cpp());
+        res.append(";\n");
+        
+        return res.toString();
+    }
 }

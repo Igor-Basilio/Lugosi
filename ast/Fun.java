@@ -17,4 +17,38 @@ public class Fun{
 		this.vars = vars;
 		this.body = body;
 	}
+
+    public String gen_cpp()
+    {
+        StringBuilder res = new StringBuilder();
+
+        res.append(retorno);
+        res.append(' ');
+        res.append(nome);
+        res.append("( ");
+
+        for(int i=0; i < params.size() - 1; i++)
+        {
+            res.append(params.get(i).gen_cpp());
+            res.append(", ");
+        }
+        res.append(params.get(params.size() - 1).gen_cpp());
+
+        res.append(") {\n");
+        
+        for(VarDecl v : vars)
+        {
+            res.append(v.gen_cpp());
+            res.append('\n');
+        }
+
+        for(Comando c : body)
+        {
+            res.append(c.gen_cpp());
+            res.append('\n');
+        }
+        res.append('}');
+
+        return res.toString();
+    }
 }

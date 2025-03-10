@@ -3,8 +3,8 @@
 package parser;
 import java.io.*;
 import syntacticTree.*;
-import ast.*;
 import java.util.ArrayList;
+import ast.*;
 
 /** Token Manager. */
 @SuppressWarnings ("unused")

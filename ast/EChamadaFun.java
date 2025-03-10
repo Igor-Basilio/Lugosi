@@ -12,4 +12,22 @@ public class EChamadaFun extends Exp{
 	  this.args = args;
 	} 
 
+    public String gen_cpp()
+    {
+        StringBuilder res = new StringBuilder();
+
+        res.append(fun);
+        res.append('(');
+
+        for(int i=0; i < args.size() - 1; i++ )
+        {
+            res.append(args.get(i).gen_cpp());
+            res.append(", ");
+        }
+
+        res.append(args.get(args.size() - 1).gen_cpp());
+        res.append(')');
+
+        return res.toString();
+    }
 }

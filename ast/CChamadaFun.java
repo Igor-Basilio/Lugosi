@@ -14,4 +14,16 @@ public class CChamadaFun extends Comando{
 	  this.args = args;
 	} 
 
+    public String gen_cpp()
+    {
+        StringBuilder res = new StringBuilder();
+
+        res.append(fun);
+        res.append('(');
+        for(Exp e : args)
+            res.append(e.gen_cpp());
+        res.append(")\n");
+
+        return res.toString();
+    }
 }
