@@ -25,7 +25,8 @@ public class EChamadaFun extends Exp{
             res.append(", ");
         }
 
-        res.append(args.get(args.size() - 1).gen_cpp());
+        if(args.size() >= 1)
+            res.append(args.get(args.size() - 1).gen_cpp());
         res.append(')');
 
         return res.toString();

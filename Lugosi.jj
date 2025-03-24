@@ -137,9 +137,18 @@ Prog Lugosi ():
 } 
 {
   ((pre_func = FUNC())? (main = MAIN()) (post_func = FUNC())? <EOF>
+
   { 
-    post_func.addAll(pre_func);
-    return new Prog(main, post_func); 
+    if(post_func != null)
+    {
+      post_func.addAll(pre_func);
+      programa = new Prog(main, post_func);
+    }else
+    {
+      programa = new Prog(main, pre_func);
+    }
+
+    return programa;
   })
 }
 
@@ -246,9 +255,7 @@ Comando COMANDO() :
   | 
     LOOKAHEAD(2) 
     ((id=<ID>) 
-      <APAREN>
-    (exps=LISTAEXP())
-      <FPAREN>
+      <APAREN> (exps=LISTAEXP()) <FPAREN>
       <SEMICOLON>)
       { return new CChamadaFun(id.beginLine, id.image, exps); }
 
@@ -348,10 +355,11 @@ ArrayList<Exp> LISTAEXP():
   ArrayList<Exp> exps = new ArrayList<Exp>();
   Exp exp = null;
 }
-{
+{ (
    ((exp=EXP() {exps.add(exp);} )
     LISTAEXP_L(exps))
-    {return exps;}
+  )?
+  {return exps;}
 }
 
 void LISTAEXP_L(ArrayList<Exp> exps):
@@ -369,10 +377,11 @@ ArrayList<ParamFormalFun> LISTAARG():
   Token var_id;
   ArrayList<ParamFormalFun> params = new ArrayList<ParamFormalFun>();
 }
-{
-  (type=TIPO())
-  (var_id=<ID> { params.add(new ParamFormalFun(type, var_id.image));} )
-   LISTAARG_L(params)
+{ ( 
+   (type=TIPO())
+   (var_id=<ID> { params.add(new ParamFormalFun(type, var_id.image));} )
+    LISTAARG_L(params)
+  )?
   {return params;}
 }
 

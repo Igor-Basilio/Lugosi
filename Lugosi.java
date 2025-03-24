@@ -75,8 +75,16 @@
       ;
     }
     jj_consume_token(0);
-post_func.addAll(pre_func);
-    {if ("" != null) return new Prog(main, post_func);}
+if(post_func != null)
+    {
+      post_func.addAll(pre_func);
+      programa = new Prog(main, post_func);
+    }else
+    {
+      programa = new Prog(main, pre_func);
+    }
+
+    {if ("" != null) return programa;}
     throw new Error("Missing return statement in function");
 }
 
@@ -418,9 +426,22 @@ result=exp1;
 
   final public ArrayList<Exp> LISTAEXP() throws ParseException {ArrayList<Exp> exps = new ArrayList<Exp>();
   Exp exp = null;
-    exp = EXP();
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case APAREN:
+    case TRUE:
+    case FALSE:
+    case NUM:
+    case ID:
+    case STRING_LITERAL:{
+      exp = EXP();
 exps.add(exp);
-    LISTAEXP_L(exps);
+      LISTAEXP_L(exps);
+      break;
+      }
+    default:
+      jj_la1[10] = jj_gen;
+      ;
+    }
 {if ("" != null) return exps;}
     throw new Error("Missing return statement in function");
 }
@@ -434,7 +455,7 @@ exps.add(exp);
         break;
         }
       default:
-        jj_la1[10] = jj_gen;
+        jj_la1[11] = jj_gen;
         break label_4;
       }
       jj_consume_token(COMMA);
@@ -446,10 +467,22 @@ exps.add(exp);
   final public ArrayList<ParamFormalFun> LISTAARG() throws ParseException {String type = null;
   Token var_id;
   ArrayList<ParamFormalFun> params = new ArrayList<ParamFormalFun>();
-    type = TIPO();
-    var_id = jj_consume_token(ID);
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case VOID:
+    case FLOAT:
+    case STRING:
+    case INT:
+    case BOOLEAN:{
+      type = TIPO();
+      var_id = jj_consume_token(ID);
 params.add(new ParamFormalFun(type, var_id.image));
-    LISTAARG_L(params);
+      LISTAARG_L(params);
+      break;
+      }
+    default:
+      jj_la1[12] = jj_gen;
+      ;
+    }
 {if ("" != null) return params;}
     throw new Error("Missing return statement in function");
 }
@@ -464,7 +497,7 @@ params.add(new ParamFormalFun(type, var_id.image));
         break;
         }
       default:
-        jj_la1[11] = jj_gen;
+        jj_la1[13] = jj_gen;
         break label_5;
       }
       jj_consume_token(COMMA);
@@ -492,7 +525,7 @@ funs.add(fun);
         break;
         }
       default:
-        jj_la1[12] = jj_gen;
+        jj_la1[14] = jj_gen;
         break label_6;
       }
       fun = FUNC_D();
@@ -558,6 +591,13 @@ funs.add(fun);
     return false;
   }
 
+  private boolean jj_3_4()
+ {
+    if (jj_scan_token(ID)) return true;
+    if (jj_scan_token(APAREN)) return true;
+    return false;
+  }
+
   private boolean jj_3_1()
  {
     if (jj_scan_token(ID)) return true;
@@ -573,13 +613,6 @@ funs.add(fun);
     return false;
   }
 
-  private boolean jj_3_4()
- {
-    if (jj_scan_token(ID)) return true;
-    if (jj_scan_token(APAREN)) return true;
-    return false;
-  }
-
   /** Generated Token Manager. */
   public LugosiTokenManager token_source;
   SimpleCharStream jj_input_stream;
@@ -591,7 +624,7 @@ funs.add(fun);
   private Token jj_scanpos, jj_lastpos;
   private int jj_la;
   private int jj_gen;
-  final private int[] jj_la1 = new int[13];
+  final private int[] jj_la1 = new int[15];
   static private int[] jj_la1_0;
   static private int[] jj_la1_1;
   static {
@@ -599,10 +632,10 @@ funs.add(fun);
 	   jj_la1_init_1();
 	}
 	private static void jj_la1_init_0() {
-	   jj_la1_0 = new int[] {0x0,0x0,0x1000,0x0,0x2e800,0xca00000,0xca00000,0x30080000,0x30000000,0xc0000000,0x0,0x0,0x0,};
+	   jj_la1_0 = new int[] {0x0,0x0,0x1000,0x0,0x2e800,0xca00000,0xca00000,0x30080000,0x30000000,0xc0000000,0x30080000,0x0,0x2e800,0x0,0x0,};
 	}
 	private static void jj_la1_init_1() {
-	   jj_la1_1 = new int[] {0x400,0x400,0x0,0x800,0x0,0x2000,0x0,0xb000,0xb000,0x3ff,0x800,0x800,0x400,};
+	   jj_la1_1 = new int[] {0x400,0x400,0x0,0x800,0x0,0x2000,0x0,0xb000,0xb000,0x3ff,0xb000,0x800,0x0,0x800,0x400,};
 	}
   final private JJCalls[] jj_2_rtns = new JJCalls[4];
   private boolean jj_rescan = false;
@@ -619,7 +652,7 @@ funs.add(fun);
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -634,7 +667,7 @@ funs.add(fun);
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -645,7 +678,7 @@ funs.add(fun);
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -664,7 +697,7 @@ funs.add(fun);
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -674,7 +707,7 @@ funs.add(fun);
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -684,7 +717,7 @@ funs.add(fun);
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 13; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 15; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -820,7 +853,7 @@ funs.add(fun);
 	   la1tokens[jj_kind] = true;
 	   jj_kind = -1;
 	 }
-	 for (int i = 0; i < 13; i++) {
+	 for (int i = 0; i < 15; i++) {
 	   if (jj_la1[i] == jj_gen) {
 		 for (int j = 0; j < 32; j++) {
 		   if ((jj_la1_0[i] & (1<<j)) != 0) {

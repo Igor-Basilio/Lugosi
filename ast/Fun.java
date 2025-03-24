@@ -32,7 +32,9 @@ public class Fun{
             res.append(params.get(i).gen_cpp());
             res.append(", ");
         }
-        res.append(params.get(params.size() - 1).gen_cpp());
+
+        if(params.size() >= 1)
+            res.append(params.get(params.size() - 1).gen_cpp());
 
         res.append(") {\n");
         

@@ -1,0 +1,31 @@
+
+def int fibonnaci(int n)
+{
+    let int result, c_n;     
+
+    let int prev, temp;
+
+    c_n := n;
+
+    prev := 0;
+    result := 1;
+    
+    while( (c_n > 1) ) do
+    {
+       temp := result;
+       result := (prev + result);
+       prev := temp;
+       c_n := (c_n - 1);
+    };
+
+    return result;
+}
+
+void main
+{
+    let int s;
+    s := fibonnaci(22);
+    printIO (s + 1);
+    return 0;
+}
+

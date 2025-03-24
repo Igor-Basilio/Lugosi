@@ -25,7 +25,8 @@ public class VarDecl{
             res.append(", ");
        }
 
-       res.append(var.get(var.size() - 1));
+       if(var.size() >= 1)
+           res.append(var.get(var.size() - 1));
        res.append(';');
 
        return res.toString();
